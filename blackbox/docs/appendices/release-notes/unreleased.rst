@@ -40,6 +40,9 @@ Breaking Changes
 Changes
 =======
 
+- ``<object_column> = <object_literal>`` comparisons now try to utilize the
+  index for the objects contents and can therefore run much faster.
+
 Fixes
 =====
 
