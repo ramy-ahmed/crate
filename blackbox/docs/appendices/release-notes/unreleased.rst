@@ -40,6 +40,8 @@ Breaking Changes
 Changes
 =======
 
+- Added support for query operations on nested arrays.
+
 Fixes
 =====
 
