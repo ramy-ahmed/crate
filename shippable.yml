@@ -1,5 +1,5 @@
 #### Shippable CI CONFIG
-
+---
 language: java
 
 jdk:
@@ -7,10 +7,6 @@ jdk:
 
 git:
   submodules: true
-
-# Avoid duplicate builds for master and the PR branch
-branches:
-  except: master
 
 env:
   global:
