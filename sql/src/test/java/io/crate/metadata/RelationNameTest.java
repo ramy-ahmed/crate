@@ -24,11 +24,22 @@ package io.crate.metadata;
 
 import com.google.common.collect.ImmutableList;
 import io.crate.blob.v2.BlobIndex;
+import io.crate.exceptions.RelationUnknown;
+import io.crate.metadata.table.TableInfo;
+import io.crate.metadata.view.ViewMetaData;
+import io.crate.sql.tree.QualifiedName;
 import io.crate.test.integration.CrateUnitTest;
 import org.apache.lucene.util.BytesRef;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static org.hamcrest.core.Is.is;
+import static org.mockito.AdditionalMatchers.not;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class RelationNameTest extends CrateUnitTest {
 
@@ -96,5 +107,53 @@ public class RelationNameTest extends CrateUnitTest {
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage("Invalid index name: my_schema..partitioned.t1.abc.foo");
         RelationName.fqnFromIndexName("my_schema..partitioned.t1.abc.foo");
+    }
+
+    @Test
+    public void testResolveRelationForFqn() {
+        QualifiedName fqn = new QualifiedName(Arrays.asList("schema", "t"));
+        RelationName relation = RelationName.resolveRelation(fqn, new SearchPath(), mock(Schemas.class));
+
+        assertThat(relation.schema(), is("schema"));
+        assertThat(relation.name(), is("t"));
+    }
+
+    @Test
+    public void testResolveRelationReturnsRelationFromSearchPath() {
+        Schemas schemas = mock(Schemas.class);
+        RelationName targetRelation = new RelationName("secondSchema", "t");
+        when(schemas.getTableInfo(targetRelation)).thenReturn(mock(TableInfo.class));
+        when(schemas.getTableInfo(not(eq(targetRelation)))).thenThrow(new RelationUnknown(targetRelation));
+
+        SearchPath searchPath = new SearchPath(ImmutableList.of("firstSchema", "secondSchema"));
+        RelationName resolvedRelation = RelationName.resolveRelation(new QualifiedName("t"), searchPath, schemas);
+
+        assertThat(resolvedRelation, is(targetRelation));
+    }
+
+    @Test
+    public void testResolveRelationResolvesViews() {
+        Schemas schemas = mock(Schemas.class);
+        when(schemas.getTableInfo(any(RelationName.class))).thenThrow(new RelationUnknown("v", null));
+
+        RelationName targetView = new RelationName("secondSchema", "v");
+        when(schemas.resolveView(targetView)).thenReturn(mock(ViewMetaData.class));
+
+        SearchPath searchPath = new SearchPath(ImmutableList.of("firstSchema", "secondSchema"));
+        RelationName resolvedRelation = RelationName.resolveRelation(new QualifiedName("v"), searchPath, schemas);
+
+        assertThat(resolvedRelation, is(targetView));
+    }
+
+    @Test
+    public void testResolveRelationForMissingRelationThrowsResourceUnknownException() {
+        Schemas schemas = mock(Schemas.class);
+        when(schemas.getTableInfo(any(RelationName.class))).thenThrow(new RelationUnknown("t", null));
+
+        SearchPath searchPath = new SearchPath(ImmutableList.of("firstSchema", "secondSchema", "thirdSchema"));
+
+        expectedException.expect(RelationUnknown.class);
+        expectedException.expectMessage("Relation 't' unknown");
+        RelationName.resolveRelation(new QualifiedName("t"), searchPath, schemas);
     }
 }

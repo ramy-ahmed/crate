@@ -40,6 +40,9 @@ Breaking Changes
 Changes
 =======
 
+- Expand the ``search_path`` setting to accept a list of schemas that will be
+  searched when a relation is referenced without specifying a schema.
+
 - Added support for using generated columns inside object columns.
 
 Fixes

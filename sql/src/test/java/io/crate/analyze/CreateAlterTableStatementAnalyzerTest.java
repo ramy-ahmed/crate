@@ -712,6 +712,16 @@ public class CreateAlterTableStatementAnalyzerTest extends CrateDummyClusterServ
     }
 
     @Test
+    public void testCreateTableUsesDefaultSchema() {
+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService, 1, Randomness.get())
+            .setSearchPath("firstSchema", "secondSchema")
+            .build();
+
+        CreateTableAnalyzedStatement analysis = sqlExecutor.analyze("create table t (id int)");
+        assertThat(analysis.tableIdent().schema(), is(sqlExecutor.getSessionContext().defaultSchema()));
+    }
+
+    @Test
     public void testCreateTableWithEmptySchema() throws Exception {
         expectedException.expect(InvalidSchemaNameException.class);
         expectedException.expectMessage("schema name \"\" is invalid.");

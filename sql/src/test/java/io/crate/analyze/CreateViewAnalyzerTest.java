@@ -62,6 +62,16 @@ public class CreateViewAnalyzerTest extends CrateDummyClusterServiceUnitTest {
     }
 
     @Test
+    public void testCreateViewCreatesViewInDefaultSchema() {
+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
+            .setSearchPath("firstSchema", "secondSchema")
+            .build();
+        CreateViewStmt createView = sqlExecutor.analyze("create view v1 as select * from sys.nodes");
+
+        assertThat(createView.name(), is(new RelationName(sqlExecutor.getSessionContext().defaultSchema(), "v1")));
+    }
+
+    @Test
     public void testCreateOrReplaceViewCreatesStatementWithNameAndAnalyzedRelation() {
         CreateViewStmt createView = e.analyze("create or replace view v1 as select x from t1");
         assertTrue(createView.replaceExisting());
