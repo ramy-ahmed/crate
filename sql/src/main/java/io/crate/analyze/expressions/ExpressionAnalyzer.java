@@ -79,6 +79,7 @@ import io.crate.sql.tree.ArrayComparison;
 import io.crate.sql.tree.ArrayComparisonExpression;
 import io.crate.sql.tree.ArrayLikePredicate;
 import io.crate.sql.tree.ArrayLiteral;
+import io.crate.sql.tree.ArraySubQueryExpression;
 import io.crate.sql.tree.AstVisitor;
 import io.crate.sql.tree.BetweenPredicate;
 import io.crate.sql.tree.BooleanLiteral;
@@ -528,6 +529,17 @@ public class ExpressionAnalyzer {
         }
 
         @Override
+        protected Symbol visitArraySubQueryExpression(ArraySubQueryExpression node, ExpressionAnalysisContext context) {
+            context.forceReturnMultipleRows(true);
+            Symbol argument = process(node.subqueryExpression(), context);
+            context.forceReturnMultipleRows(false);
+            return allocateFunction(
+                ArrayFunction.NAME,
+                ImmutableList.of(argument),
+                context);
+        }
+
+        @Override
         protected Symbol visitIsNotNullPredicate(IsNotNullPredicate node, ExpressionAnalysisContext context) {
             Symbol argument = process(node.getValue(), context);
             return allocateFunction(
@@ -855,7 +867,7 @@ public class ExpressionAnalyzer {
             DataType innerType = fields.get(0).valueType();
             ArrayType dataType = new ArrayType(innerType);
             final SelectSymbol.ResultType resultType;
-            if (context.isArrayComparisonChild(node)) {
+            if (context.isReturnMultipleRowsAllowed(node)) {
                 resultType = SelectSymbol.ResultType.SINGLE_COLUMN_MULTIPLE_VALUES;
             } else {
                 resultType = SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE;

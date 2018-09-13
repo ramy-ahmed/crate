@@ -38,6 +38,7 @@ public class ExpressionAnalysisContext {
     private final Map<SubqueryExpression, Object> arrayExpressionsChildren = new IdentityHashMap<>();
 
     private boolean hasAggregates;
+    private boolean forceReturnMultipleRows;
 
     void indicateAggregates() {
         hasAggregates = true;
@@ -45,6 +46,14 @@ public class ExpressionAnalysisContext {
 
     public boolean hasAggregates() {
         return hasAggregates;
+    }
+
+    void forceReturnMultipleRows(boolean forceReturnMultipleRows) {
+        this.forceReturnMultipleRows = forceReturnMultipleRows;
+    }
+
+    boolean isReturnMultipleRowsForced() {
+        return forceReturnMultipleRows;
     }
 
     /**
@@ -61,8 +70,12 @@ public class ExpressionAnalysisContext {
      * Checks if the given SubqueryExpression is part of an {@link ArrayComparisonExpression}.
      * @return True if the given expression has previously been registered.
      */
-    boolean isArrayComparisonChild(SubqueryExpression expression) {
+    private boolean isArrayComparisonChild(SubqueryExpression expression) {
         return arrayExpressionsChildren.containsKey(expression);
+    }
+
+    boolean isReturnMultipleRowsAllowed(SubqueryExpression subqueryExpression) {
+        return isArrayComparisonChild(subqueryExpression) || isReturnMultipleRowsForced();
     }
 
     private class ArrayComparisonChildVisitor extends DefaultTraversalVisitor<Void, Void> {
